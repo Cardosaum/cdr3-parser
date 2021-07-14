@@ -1,18 +1,47 @@
 [package]
-name = "cdr3-parser"
-version = "0.1.0"
+authors = ["Matheus Cardoso <cardosaum@pm.me>"]
+categories = ["bioinformatics"]
+description = "cdr3-parser is a simple and fast parser to 'aafreq' files generated from ATTILA."
 edition = "2018"
+homepage = "https://github.com/Cardosaum/cdr3-parser"
+keywords = [
+    "bioinformatics",
+    "biological-sequences",
+    "parser",
+]
+license = "AGPL-3.0"
+name = "cdr3-parser"
+readme = "README.md"
+repository = "https://github.com/Cardosaum/cdr3-parser"
+version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "cdr3-parser"
+path = "src/main.rs"
+
+[build-dependencies]
+clap = "2.31.2"
+version_check = "0.9"
 
 [dependencies]
 bio = "0.34.0"
-clap = "2.27.0"
 csv = "1.1.6"
 lazy_static = "1.4.0"
+num = "0.4.0"
 rayon = "1.5.1"
 regex = "1"
 serde = "1.0.117"
-serde_with = "1.5.1"
 serde_json = "1.0.59"
+serde_with = "1.5.1"
 velcro = "0.5.3"
+
+[dependencies.clap]
+version = "2.31.2"
+features = ["suggestions", "color", "wrap_help"]
+
+[target.'cfg(all(not(windows), not(target_os = "android"), not(target_os = "macos"), not(target_env = "musl")))'.dependencies]
+jemallocator = "0.3.0"
+
+[profile.release]
+lto = true
+codegen-units = 1

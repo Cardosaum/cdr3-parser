@@ -33,6 +33,8 @@ use lazy_static::lazy_static;
 use num::pow;
 use std::collections::{HashMap, HashSet};
 
+use crate::cdr3::protein_analysis::PROTEIN_LETTERS;
+
 lazy_static! {
     static ref POSITIVE_PKS: HashMap<String, f64> = {
         [("Nterm", 7.5), ("K", 10.0), ("R", 12.0), ("H", 5.98)]
@@ -83,7 +85,6 @@ lazy_static! {
             })
             .collect()
     };
-    static ref PROTEIN_LETTERS: String = String::from("ACDEFGHIKLMNPQRSTVWY");
 }
 
 #[derive(Debug)]

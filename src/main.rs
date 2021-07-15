@@ -58,43 +58,44 @@ fn main() {
             .to_string(),
     );
 
-    // let cdr3_dict = extract_cdr3(input_file, output_file);
-    let sequences = extract_cdr3(parse_file(input_file));
+    // // let cdr3_dict = extract_cdr3(input_file, output_file);
+    // let sequences = extract_cdr3(parse_file(input_file));
 
-    // for x in &sequences {
-    //     println!("{}", x);
-    // }
+    // // for x in &sequences {
+    // //     println!("{}", x);
+    // // }
 
-    let mut cdr3_dict = create_cdr3_dict(sequences);
-    let cdr3_prop = build_cdr3_struct(cdr3_dict.first_entry().unwrap().key().to_string());
-    // println!("{}", molecular_weight(&cdr3_prop.cdr3));
-    // println!("{}", aromaticity(&cdr3_prop.cdr3));
-    // println!("{:?}", cdr3_prop);
+    // let mut cdr3_dict = create_cdr3_dict(sequences);
+    // let cdr3_prop = build_cdr3_struct(cdr3_dict.first_entry().unwrap().key().to_string());
+    // // println!("{}", molecular_weight(&cdr3_prop.cdr3));
+    // // println!("{}", aromaticity(&cdr3_prop.cdr3));
+    // // println!("{:?}", cdr3_prop);
 
-    // println!("{:?}", cdr3_prop.cdr3);
-    // println!("{:?}", &cdr3_dict.first_entry().unwrap().key());
-    // println!("{:?}", &cdr3_dict);
+    // // println!("{:?}", cdr3_prop.cdr3);
+    // // println!("{:?}", &cdr3_dict.first_entry().unwrap().key());
+    // // println!("{:?}", &cdr3_dict);
 
-    let mut cdr3_sequences_attributes = get_cdr3_sequences_attributes(cdr3_dict);
+    // let mut cdr3_sequences_attributes = get_cdr3_sequences_attributes(cdr3_dict);
 
-    // for x in cdr3_sequences_attributes {
-    //     println!("{:}", x.cdr3);
-    // }
+    // // for x in cdr3_sequences_attributes {
+    // //     println!("{:}", x.cdr3);
+    // // }
 
-    // cdr3_dict.into_par_iter().map(|cdr3| {build_cdr3_struct(cdr3.0.to_string())}).collect_into_vec(cdr3_sequences_attributes);
+    // // cdr3_dict.into_par_iter().map(|cdr3| {build_cdr3_struct(cdr3.0.to_string())}).collect_into_vec(cdr3_sequences_attributes);
 
-    // for cdr3_sequence in cdr3_dict {
-    //     // println!("{:?}", cdr3_sequence);
-    //     let m = build_cdr3_struct(cdr3_sequence.0);
-    //     println!("{:?}", m);
-    // }
+    // // for cdr3_sequence in cdr3_dict {
+    // //     // println!("{:?}", cdr3_sequence);
+    // //     let m = build_cdr3_struct(cdr3_sequence.0);
+    // //     println!("{:?}", m);
+    // // }
 
-    // aa_groups("SAGTKJLAS".to_string());
+    // // aa_groups("SAGTKJLAS".to_string());
 
-    write_cdr3_attributes(cdr3_sequences_attributes, output_file);
-    //
-    // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
-    // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
+    // write_cdr3_attributes(cdr3_sequences_attributes, output_file);
+    // //
+    // // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
+    // // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
+    println!("{:?}", ProteinAnalysis::new("FIVESK"));
 }
 
 fn parse_file(mut input_file: PathBuf) -> Vec<String> {

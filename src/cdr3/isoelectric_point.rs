@@ -87,14 +87,15 @@ lazy_static! {
     };
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct IsoelectricPoint {
     sequence: String,
     aa_content: HashMap<char, usize>,
     pos_pKs: HashMap<String, f64>,
     neg_pKs: HashMap<String, f64>,
-    charged_ass_content: HashMap<String, f64>,
+    charged_aas_content: HashMap<String, f64>,
     pub isoeletric_point: f64,
+    pub charge_at_pH: f64,
 }
 
 impl IsoelectricPoint {
@@ -108,11 +109,12 @@ impl IsoelectricPoint {
             aa_content: a,
             pos_pKs: p.0,
             neg_pKs: p.1,
-            charged_ass_content: c,
-            isoeletric_point: 0.0,
+            charged_aas_content: c,
+            ..Default::default()
         };
         let i = IsoelectricPoint::pi(&tmp, pH, None, None);
         tmp.isoeletric_point = i;
+        tmp.charge_at_pH = tmp.charge_at_pH(pH.unwrap_or(7.775));
         tmp
     }
 
@@ -146,9 +148,7 @@ impl IsoelectricPoint {
         let mut pKnterminal = PKNTERMINAL.clone();
         let mut pKcterminal = PKCTERMINAL.clone();
 
-        if let Some(n) = pKnterminal.get_mut(&nterm) {
-            *n = pos_pKs.get("Nterm").expect("Failed to get 'Nterm'").clone();
-        }
+        if let Some(n) = pKnterminal.get_mut(&nterm) {}
         if let Some(n) = pKcterminal.get_mut(&cterm) {
             *n = neg_pKs.get("Cterm").expect("Failed to get 'Cterm'").clone();
         }
@@ -168,12 +168,12 @@ impl IsoelectricPoint {
         charged
     }
 
-    fn charge_at_pH(&self, pH: f64) -> f64 {
+    pub fn charge_at_pH(&self, pH: f64) -> f64 {
         let mut positive_charge: f64 = 0.0;
         for (aa, pK) in &self.pos_pKs {
             let partial_charge: f64 = 1.0_f64 / (10.0_f64.powf(pH - pK) + 1.0_f64);
             positive_charge += self
-                .charged_ass_content
+                .charged_aas_content
                 .get(aa)
                 .expect("Failed to retrive amino acid charge")
                 * partial_charge;
@@ -183,7 +183,7 @@ impl IsoelectricPoint {
         for (aa, pK) in &self.neg_pKs {
             let partial_charge: f64 = 1.0_f64 / (10.0_f64.powf(pK - pH) + 1.0_f64);
             negative_charge += self
-                .charged_ass_content
+                .charged_aas_content
                 .get(aa)
                 .expect("Failed to retrive amino acid charge")
                 * partial_charge;

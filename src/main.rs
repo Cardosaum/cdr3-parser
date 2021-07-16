@@ -1,4 +1,4 @@
-#![feature(map_first_last)]
+// #![feature(map_first_last)]
 extern crate bio;
 extern crate clap;
 extern crate num;
@@ -95,7 +95,10 @@ fn main() {
     // //
     // // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
     // // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
+
     println!("{:?}", ProteinAnalysis::new("FIVESK"));
+    // println!("{:?}", ProteinAnalysis::new("GATTACA"));
+    println!("{:?}", ProteinAnalysis::new("FIVESKVIESLTY"));
 }
 
 fn parse_file(mut input_file: PathBuf) -> Vec<String> {

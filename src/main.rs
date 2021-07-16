@@ -59,12 +59,8 @@ fn main() {
             .to_string(),
     );
 
+    pipeline_cdr3(input_file);
     // // let cdr3_dict = extract_cdr3(input_file, output_file);
-    // let sequences = extract_cdr3(parse_file(input_file));
-
-    // // for x in &sequences {
-    // //     println!("{}", x);
-    // // }
 
     // let mut cdr3_dict = create_cdr3_dict(sequences);
     // let cdr3_prop = build_cdr3_struct(cdr3_dict.first_entry().unwrap().key().to_string());
@@ -97,40 +93,13 @@ fn main() {
     // // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
     // // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
 
-    println!("{:?}", ProteinAnalysis::new("FIVESK").molecular_weight);
-    println!("{:?}", ProteinAnalysis::new("GATTACA").molecular_weight);
-    println!(
-        "{:?}",
-        ProteinAnalysis::new("FIVESKVIESLTY").molecular_weight
-    );
+    // println!("{:?}", ProteinAnalysis::new("FIVESK").molecular_weight);
+    // println!("{:?}", ProteinAnalysis::new("GATTACA").molecular_weight);
+    // println!(
+    //     "{:?}",
+    //     ProteinAnalysis::new("FIVESKVIESLTY").molecular_weight
+    // );
 
     // let P = ProteinAnalysis::new("FIVESKVIESLTY");
     // println!("\n{}\n", json!(&P).to_string());
-
-    // let mut wtr = csv::Writer::from_writer(io::stdout());
-    // wtr.write_record(&["sequence", "length", "molecular_weight"]);
-    // wtr.write_record(&[P.sequence, P.length.to_string(), P.molecular_weight.to_string()]);
-    // wtr.flush();
-}
-
-fn parse_file(mut input_file: PathBuf) -> Vec<String> {
-    let input_file_handler = File::open(input_file).expect("Failed to open <INPUT_FILE>");
-    let reader = BufReader::new(input_file_handler);
-    let mut seqs = Vec::<String>::new();
-
-    for line in reader.lines() {
-        let line = match line {
-            Ok(line) => line,
-            Err(error) => {
-                println!("Error reading file: {:?}", error);
-                std::process::exit(4);
-            }
-        };
-
-        if !line.starts_with(">") && !line.starts_with("#") && !line.starts_with("*") {
-            seqs.push(line.to_string());
-        }
-    }
-
-    return seqs;
 }

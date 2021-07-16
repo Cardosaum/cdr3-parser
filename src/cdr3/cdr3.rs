@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
+// use serde_json::Result;
 use serde_with::serde_as;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, File, OpenOptions};
@@ -219,27 +219,75 @@ pub fn extract_cdr3(mut sequences: Vec<String>) -> Vec<String> {
     return sequences;
 }
 
-pub fn write_cdr3_attributes(cdr3_attributes: Vec<CDR3Prop>, output_file: PathBuf) -> Result<()> {
-    // println!("{:?}", output_file);
+// pub fn write_cdr3_attributes(cdr3_attributes: Vec<CDR3Prop>, output_file: PathBuf) -> Result<()> {
+pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
+    let mut wtr = csv::Writer::from_writer(io::stdout());
+    wtr.write_record(&[
+        "sequence",
+        "length",
+        "molecular_weight",
+        "aromaticity",
+        "charge_at_pH",
+        "gravy",
+        "instability_index",
+        "isoelectric_point",
+        "ssf_helix",
+        "ssf_turn",
+        "ssf_sheet",
+    ])?;
+    wtr.flush()?;
+    Ok(())
+}
 
-    let j = serde_json::to_string(&cdr3_attributes)?;
-    println!("{}", j);
+pub fn write_cdr3_attributes(sequence: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let P = ProteinAnalysis::new(sequence);
+    let mut wtr = csv::Writer::from_writer(io::stdout());
+    wtr.write_record(&[
+        P.sequence,
+        P.length.to_string(),
+        P.molecular_weight.to_string(),
+        P.aromaticity.to_string(),
+        P.charge_at_pH.to_string(),
+        P.gravy.to_string(),
+        P.instability_index.to_string(),
+        P.isoelectric_point.to_string(),
+        P.secondary_structure_fraction.0.to_string(),
+        P.secondary_structure_fraction.1.to_string(),
+        P.secondary_structure_fraction.2.to_string(),
+    ])?;
+    wtr.flush()?;
+    Ok(())
+}
 
-    // let mut wtr = Writer::from_path(output_file)?;
+fn parse_file(mut input_file: PathBuf) -> Vec<String> {
+    let input_file_handler = File::open(input_file).expect("Failed to open <INPUT_FILE>");
+    let reader = BufReader::new(input_file_handler);
+    let mut seqs = Vec::<String>::new();
 
-    // wtr.serialize(cdr3_attributes)?;
-    // println!("{}", output_file);
-    // for x in cdr3_attributes {
-    //     println!("{:?}", x);
-    //     wtr.serialize(x)?;
-    // }
-    // wtr.flush()?;
-    // let m: Vec<String> = cdr3_attributes
-    //     .iter()
-    //     .map(|c| c.cdr3.clone())
-    //     .collect();
+    for line in reader.lines() {
+        let line = match line {
+            Ok(line) => line,
+            Err(error) => {
+                println!("Error reading file: {:?}", error);
+                std::process::exit(4);
+            }
+        };
 
-    // println!("{:?}", m);
+        if !line.starts_with(">") && !line.starts_with("#") && !line.starts_with("*") {
+            seqs.push(line.to_string());
+        }
+    }
 
-    return Ok(());
+    return seqs;
+}
+
+pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let sequences = extract_cdr3(parse_file(input_file));
+
+    write_cdr3_header();
+    sequences.par_iter().for_each(|s| {
+        write_cdr3_attributes(s);
+    });
+
+    Ok(())
 }

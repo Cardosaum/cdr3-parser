@@ -12,6 +12,7 @@ use cdr3::prelude::*;
 
 use clap::{App, Arg, Error, SubCommand};
 use csv::Writer;
+use serde_json::json;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, prelude::*, BufReader};
 use std::iter::FromIterator;
@@ -96,9 +97,20 @@ fn main() {
     // // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
     // // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
 
-    println!("{:?}", ProteinAnalysis::new("FIVESK"));
-    // println!("{:?}", ProteinAnalysis::new("GATTACA"));
-    println!("{:?}", ProteinAnalysis::new("FIVESKVIESLTY"));
+    println!("{:?}", ProteinAnalysis::new("FIVESK").molecular_weight);
+    println!("{:?}", ProteinAnalysis::new("GATTACA").molecular_weight);
+    println!(
+        "{:?}",
+        ProteinAnalysis::new("FIVESKVIESLTY").molecular_weight
+    );
+
+    // let P = ProteinAnalysis::new("FIVESKVIESLTY");
+    // println!("\n{}\n", json!(&P).to_string());
+
+    // let mut wtr = csv::Writer::from_writer(io::stdout());
+    // wtr.write_record(&["sequence", "length", "molecular_weight"]);
+    // wtr.write_record(&[P.sequence, P.length.to_string(), P.molecular_weight.to_string()]);
+    // wtr.flush();
 }
 
 fn parse_file(mut input_file: PathBuf) -> Vec<String> {

@@ -6,6 +6,8 @@
 use crate::cdr3::isoelectric_point::IsoelectricPoint;
 use lazy_static::lazy_static;
 use num::pow;
+use serde::Serialize;
+use serde_json::json;
 use std::collections::{HashMap, HashSet};
 
 lazy_static! {
@@ -29,19 +31,30 @@ lazy_static! {
         .collect()
 };
 
-    pub static ref MONOISOTOPIC_PROTEIN_WEIGHTS:  HashMap<char, f64> = {
+    pub static ref PROTEIN_WEIGHTS:  HashMap<char, f64> = {
     [
-    ('A', 89.047678),  ('C', 121.019749),
-    ('D', 133.037508), ('E', 147.053158),
-    ('F', 165.078979), ('G', 75.032028),
-    ('H', 155.069477), ('I', 131.094629),
-    ('K', 146.105528), ('L', 131.094629),
-    ('M', 149.051049), ('N', 132.053492),
-    ('O', 255.158292), ('P', 115.063329),
-    ('Q', 146.069142), ('R', 174.111676),
-    ('S', 105.042593), ('T', 119.058243),
-    ('U', 168.964203), ('V', 117.078979),
-    ('W', 204.089878), ('Y', 181.073893),
+    ('A', 89.0932),
+    ('C', 121.1582),
+    ('D', 133.1027),
+    ('E', 147.1293),
+    ('F', 165.1891),
+    ('G', 75.0666),
+    ('H', 155.1546),
+    ('I', 131.1729),
+    ('K', 146.1876),
+    ('L', 131.1729),
+    ('M', 149.2113),
+    ('N', 132.1179),
+    ('O', 255.3134),
+    ('P', 115.1305),
+    ('Q', 146.1445),
+    ('R', 174.201),
+    ('S', 105.0926),
+    ('T', 119.1192),
+    ('U', 168.0532),
+    ('V', 117.1463),
+    ('W', 204.2252),
+    ('Y', 181.1885),
     ]
         .iter()
         .map(|(c,f)| {(*c, (*f) as f64)})
@@ -177,13 +190,12 @@ lazy_static! {
 
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct ProteinAnalysis {
     pub sequence: String,
     pub amino_acids_content: HashMap<char, usize>,
     pub amino_acids_percent: HashMap<char, f64>,
     pub length: usize,
-    pub monoisotopic: bool,
     pub molecular_weight: f64,
     pub aromaticity: f64,
     pub instability_index: f64,
@@ -199,7 +211,6 @@ impl ProteinAnalysis {
     pub fn new(sequence: &str) -> Self {
         let mut PA = ProteinAnalysis {
             sequence: sequence.to_owned(),
-            monoisotopic: true,
             length: sequence.chars().count(),
             ..Default::default()
         };
@@ -256,11 +267,11 @@ impl ProteinAnalysis {
     fn molecular_weight(&mut self) -> f64 {
         if self.molecular_weight == 0.0 && !self.sequence.is_empty() {
             let mut weight: f64 = 0.0;
-            let water: f64 = 18.010565;
+            let water: f64 = 18.0153;
             for c in self.sequence.chars() {
-                weight += MONOISOTOPIC_PROTEIN_WEIGHTS
+                weight += PROTEIN_WEIGHTS
                     .get(&c)
-                    .expect("failed to retriece monoisotopic protein weight")
+                    .expect("failed to retriece protein weight")
             }
             weight -= (&self.length - 1) as f64 * water;
             self.molecular_weight = weight;

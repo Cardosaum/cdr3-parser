@@ -193,18 +193,18 @@ lazy_static! {
 #[derive(Default, Debug, Serialize)]
 pub struct ProteinAnalysis {
     pub sequence: String,
-    pub amino_acids_content: HashMap<char, usize>,
-    pub amino_acids_percent: HashMap<char, f64>,
+    pub amino_acids_content: Option<HashMap<char, usize>>,
+    pub amino_acids_percent: Option<HashMap<char, f64>>,
     pub length: usize,
-    pub molecular_weight: f64,
-    pub aromaticity: f64,
-    pub instability_index: f64,
-    pub flexibility: Vec<f64>,
-    pub gravy: f64,
-    pub isoelectric_point: f64,
-    pub charge_at_pH: f64,
-    pub secondary_structure_fraction: (f64, f64, f64),
-    pub molar_extinction_coefficient: (usize, usize),
+    pub molecular_weight: Option<f64>,
+    pub aromaticity: Option<f64>,
+    pub instability_index: Option<f64>,
+    pub flexibility: Option<Vec<f64>>,
+    pub gravy: Option<f64>,
+    pub isoelectric_point: Option<f64>,
+    pub charge_at_pH: Option<f64>,
+    pub secondary_structure_fraction: Option<(f64, f64, f64)>,
+    pub molar_extinction_coefficient: Option<(usize, usize)>,
 }
 
 impl ProteinAnalysis {
@@ -214,6 +214,7 @@ impl ProteinAnalysis {
             length: sequence.chars().count(),
             ..Default::default()
         };
+        let mut IP = IsoelectricPoint::new(sequence, None);
         PA.count_amino_acids();
         PA.get_amino_acids_percent();
         PA.aromaticity();
@@ -221,15 +222,15 @@ impl ProteinAnalysis {
         PA.instability_index();
         PA.flexibility();
         PA.gravy();
-        PA.isoelectric_point();
-        PA.charge_at_pH(None);
+        PA.isoelectric_point(&mut IP);
+        PA.charge_at_pH(&mut IP);
         PA.secondary_structure_fraction();
         PA.molar_extinction_coefficient();
         PA
     }
 
-    fn count_amino_acids(&mut self) -> HashMap<char, usize> {
-        if self.amino_acids_content.is_empty() {
+    pub fn count_amino_acids(&mut self) -> HashMap<char, usize> {
+        if self.amino_acids_content.is_none() {
             let mut aa: HashMap<char, usize> =
                 HashMap::with_capacity(PROTEIN_LETTERS.chars().count());
             for c in self.sequence.chars() {
@@ -240,32 +241,32 @@ impl ProteinAnalysis {
                     aa.insert(c, 0);
                 }
             }
-            self.amino_acids_content = aa;
+            self.amino_acids_content = Some(aa);
         }
-        return self.amino_acids_content.clone();
+        return self.amino_acids_content.clone().unwrap();
     }
 
-    fn get_amino_acids_percent(&mut self) -> HashMap<char, f64> {
-        if self.amino_acids_percent.is_empty() {
+    pub fn get_amino_acids_percent(&mut self) -> HashMap<char, f64> {
+        if self.amino_acids_percent.is_none() {
             let mut aa_percent: HashMap<char, f64> =
                 HashMap::with_capacity(PROTEIN_LETTERS.chars().count());
-            for (aa, v) in &self.amino_acids_content {
+            for (aa, v) in &self.count_amino_acids() {
                 aa_percent.insert(
                     *aa,
                     *self
-                        .amino_acids_content
+                        .count_amino_acids()
                         .get(aa)
                         .expect("Failed to get amino acid content") as f64
                         / self.length as f64,
                 );
             }
-            self.amino_acids_percent = aa_percent;
+            self.amino_acids_percent = Some(aa_percent);
         }
-        return self.amino_acids_percent.clone();
+        return self.amino_acids_percent.clone().unwrap();
     }
 
-    fn molecular_weight(&mut self) -> f64 {
-        if self.molecular_weight == 0.0 && !self.sequence.is_empty() {
+    pub fn molecular_weight(&mut self) -> f64 {
+        if self.molecular_weight.is_none() {
             let mut weight: f64 = 0.0;
             let water: f64 = 18.0153;
             for c in self.sequence.chars() {
@@ -274,41 +275,45 @@ impl ProteinAnalysis {
                     .expect("failed to retriece protein weight")
             }
             weight -= (&self.length - 1) as f64 * water;
-            self.molecular_weight = weight;
+            self.molecular_weight = Some(weight);
         }
-        return self.molecular_weight;
+        return self.molecular_weight.unwrap();
     }
 
-    fn aromaticity(&mut self) -> f64 {
-        let aromatic_aas = "YWF";
-        let aromaticity: f64 = 0.0;
-        let a: Vec<f64> = self
-            .amino_acids_percent
-            .iter()
-            .filter(|(k, v)| **k == 'Y' || **k == 'W' || **k == 'F')
-            .map(|(k, v)| *v)
-            .collect();
-        self.aromaticity = a.iter().sum();
-        return self.aromaticity;
-    }
-
-    fn instability_index(&mut self) -> f64 {
-        let index = &DIWV;
-        let mut score = 0.0_f64;
-
-        for i in 0..(self.length - 1) {
-            let this = self.sequence.chars().nth(i).unwrap();
-            let next = self.sequence.chars().nth(i + 1).unwrap();
-            let dipeptide_value = index[&this][&next];
-            score += dipeptide_value;
+    pub fn aromaticity(&mut self) -> f64 {
+        if self.aromaticity.is_none() {
+            let aromatic_aas = "YWF";
+            let aromaticity: f64 = 0.0;
+            let a: Vec<f64> = self
+                .get_amino_acids_percent()
+                .iter()
+                .filter(|(k, v)| **k == 'Y' || **k == 'W' || **k == 'F')
+                .map(|(k, v)| *v)
+                .collect();
+            self.aromaticity = Some(a.iter().sum());
         }
-        self.instability_index = (10.0_f64 / self.length as f64) * score;
-        return self.instability_index;
+        return self.aromaticity.unwrap();
     }
 
-    fn flexibility(&mut self) -> Vec<f64> {
+    pub fn instability_index(&mut self) -> f64 {
+        if self.instability_index.is_none() {
+            let index = &DIWV;
+            let mut score = 0.0_f64;
+
+            for i in 0..(self.length - 1) {
+                let this = self.sequence.chars().nth(i).unwrap();
+                let next = self.sequence.chars().nth(i + 1).unwrap();
+                let dipeptide_value = index[&this][&next];
+                score += dipeptide_value;
+            }
+            self.instability_index = Some((10.0_f64 / self.length as f64) * score);
+        }
+        return self.instability_index.unwrap();
+    }
+
+    pub fn flexibility(&mut self) -> Vec<f64> {
         let window_size: usize = 9;
-        if self.flexibility.is_empty() && self.length >= window_size {
+        if self.flexibility.is_none() && self.length >= window_size {
             let flexibilities = &FLEXIBILITY_TABLE;
             let weights: Vec<f64> = vec![0.25, 0.4375, 0.625, 0.8125, 1.0];
             let mut scores: Vec<f64> = Vec::with_capacity(self.length - window_size);
@@ -328,41 +333,62 @@ impl ProteinAnalysis {
                 scores.push(score / 5.25);
             }
 
-            self.flexibility = scores;
+            self.flexibility = Some(scores);
+        } else {
+            self.flexibility = Some(Vec::<f64>::new());
         }
-        return self.flexibility.clone();
+        return self.flexibility.clone().unwrap();
     }
 
-    fn gravy(&mut self) -> f64 {
-        let scale = &GRAVY_SCALE;
-        let g: f64 = self.sequence.chars().into_iter().map(|c| scale[&c]).sum();
-        self.gravy = g / self.length as f64;
-        return self.gravy;
+    pub fn gravy(&mut self) -> f64 {
+        if self.gravy.is_none() {
+            let scale = &GRAVY_SCALE;
+            let g: f64 = self.sequence.chars().into_iter().map(|c| scale[&c]).sum();
+            self.gravy = Some(g / self.length as f64);
+        }
+        return self.gravy.unwrap();
     }
 
-    fn isoelectric_point(&mut self) -> f64 {
-        self.isoelectric_point = IsoelectricPoint::new(&self.sequence, None).isoeletric_point;
-        return self.isoelectric_point;
+    pub fn isoelectric_point(&mut self, IP: &mut IsoelectricPoint) -> f64 {
+        if self.isoelectric_point.is_none() {
+            self.isoelectric_point = Some(IP.pi(None, None, None));
+        }
+        return self.isoelectric_point.unwrap();
     }
 
-    fn charge_at_pH(&mut self, pH: Option<f64>) -> f64 {
-        self.charge_at_pH = IsoelectricPoint::new(&self.sequence, pH).charge_at_pH;
-        return self.charge_at_pH;
+    pub fn charge_at_pH(&mut self, IP: &mut IsoelectricPoint) -> f64 {
+        if self.charge_at_pH.is_none() {
+            self.charge_at_pH = Some(IP.charge_at_pH(None));
+        }
+        return self.charge_at_pH.unwrap();
     }
 
-    fn secondary_structure_fraction(&mut self) -> (f64, f64, f64) {
-        let helix: f64 = "VIYFWL".chars().map(|c| self.amino_acids_percent[&c]).sum();
-        let turn: f64 = "NPGS".chars().map(|c| self.amino_acids_percent[&c]).sum();
-        let sheet: f64 = "EMAL".chars().map(|c| self.amino_acids_percent[&c]).sum();
-        self.secondary_structure_fraction = (helix, turn, sheet);
-        return self.secondary_structure_fraction;
+    pub fn secondary_structure_fraction(&mut self) -> (f64, f64, f64) {
+        if self.secondary_structure_fraction.is_none() {
+            let helix: f64 = "VIYFWL"
+                .chars()
+                .map(|c| self.get_amino_acids_percent()[&c])
+                .sum();
+            let turn: f64 = "NPGS"
+                .chars()
+                .map(|c| self.get_amino_acids_percent()[&c])
+                .sum();
+            let sheet: f64 = "EMAL"
+                .chars()
+                .map(|c| self.get_amino_acids_percent()[&c])
+                .sum();
+            self.secondary_structure_fraction = Some((helix, turn, sheet));
+        }
+        return self.secondary_structure_fraction.unwrap();
     }
 
-    fn molar_extinction_coefficient(&mut self) -> (usize, usize) {
-        let num_aa = &self.count_amino_acids();
-        let mec_reduced: usize = num_aa[&'W'] * 5500 + num_aa[&'Y'] * 1490;
-        let mec_cystines: usize = mec_reduced + (num_aa[&'C'] / 2) * 125;
-        self.molar_extinction_coefficient = (mec_reduced, mec_cystines);
-        return self.molar_extinction_coefficient;
+    pub fn molar_extinction_coefficient(&mut self) -> (usize, usize) {
+        if self.molar_extinction_coefficient.is_none() {
+            let num_aa = &self.count_amino_acids();
+            let mec_reduced: usize = num_aa[&'W'] * 5500 + num_aa[&'Y'] * 1490;
+            let mec_cystines: usize = mec_reduced + (num_aa[&'C'] / 2) * 125;
+            self.molar_extinction_coefficient = Some((mec_reduced, mec_cystines));
+        }
+        return self.molar_extinction_coefficient.unwrap();
     }
 }

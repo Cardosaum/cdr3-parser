@@ -59,7 +59,6 @@ fn main() {
             .to_string(),
     );
 
-    pipeline_cdr3(input_file);
     // // let cdr3_dict = extract_cdr3(input_file, output_file);
 
     // let mut cdr3_dict = create_cdr3_dict(sequences);
@@ -90,8 +89,8 @@ fn main() {
 
     // write_cdr3_attributes(cdr3_sequences_attributes, output_file);
     // //
-    // // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
-    // // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
+    // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
+    // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
 
     // println!("{:?}", ProteinAnalysis::new("FIVESK").molecular_weight);
     // println!("{:?}", ProteinAnalysis::new("GATTACA").molecular_weight);
@@ -100,6 +99,8 @@ fn main() {
     //     ProteinAnalysis::new("FIVESKVIESLTY").molecular_weight
     // );
 
+    pipeline_cdr3(input_file);
+    //
     // let P = ProteinAnalysis::new("FIVESKVIESLTY");
     // println!("\n{}\n", json!(&P).to_string());
 }

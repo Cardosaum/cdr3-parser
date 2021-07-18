@@ -150,60 +150,60 @@ pub fn aa_groups<'seq>(sequence: String) -> BTreeMap<String, HashSet<&'seq str>>
     return group;
 }
 
-pub fn build_cdr3_struct(cdr3: String) -> CDR3Prop {
-    CDR3Prop {
-        cdr3: cdr3.clone(),
-        quantity: 0,
-        length: cdr3.chars().count(),
-        MW: molecular_weight(&cdr3),
-        AV: aromaticity(&cdr3),
-        IP: IsoelectricPoint::new(&cdr3, None).isoeletric_point,
-        // flex: f64,
-        // gravy: f64,
-        // SSF_Helix: f64,
-        // SSF_Turn: f64,
-        // SSF_Sheet: f64,
-        aa_quantity: cdr3.chars().fold(HashMap::<char, u64>::new(), |mut k, c| {
-            *k.entry(c).or_insert(0) += 1;
-            k
-        }),
-        // n_A: cdr3.matches("A").count(),
-        // n_C: cdr3.matches("C").count(),
-        // n_D: cdr3.matches("D").count(),
-        // n_E: cdr3.matches("E").count(),
-        // n_F: cdr3.matches("F").count(),
-        // n_G: cdr3.matches("G").count(),
-        // n_H: cdr3.matches("H").count(),
-        // n_I: cdr3.matches("I").count(),
-        // n_K: cdr3.matches("K").count(),
-        // n_L: cdr3.matches("L").count(),
-        // n_M: cdr3.matches("M").count(),
-        // n_N: cdr3.matches("N").count(),
-        // n_P: cdr3.matches("P").count(),
-        // n_Q: cdr3.matches("Q").count(),
-        // n_R: cdr3.matches("R").count(),
-        // n_S: cdr3.matches("S").count(),
-        // n_T: cdr3.matches("T").count(),
-        // n_V: cdr3.matches("V").count(),
-        // n_W: cdr3.matches("W").count(),
-        // n_Y: cdr3.matches("Y").count(),
-        // aliphatic: u64,
-        // aromatic: u64,
-        // neutral: u64,
-        // positive: u64,
-        // negative: u64,
-        // invalid: u64,
-    }
-}
+// pub fn build_cdr3_struct(cdr3: String) -> CDR3Prop {
+//     CDR3Prop {
+//         cdr3: cdr3.clone(),
+//         quantity: 0,
+//         length: cdr3.chars().count(),
+//         MW: molecular_weight(&cdr3),
+//         AV: aromaticity(&cdr3),
+//         IP: IsoelectricPoint::new(&cdr3, None).isoeletric_point,
+//         // flex: f64,
+//         // gravy: f64,
+//         // SSF_Helix: f64,
+//         // SSF_Turn: f64,
+//         // SSF_Sheet: f64,
+//         aa_quantity: cdr3.chars().fold(HashMap::<char, u64>::new(), |mut k, c| {
+//             *k.entry(c).or_insert(0) += 1;
+//             k
+//         }),
+//         // n_A: cdr3.matches("A").count(),
+//         // n_C: cdr3.matches("C").count(),
+//         // n_D: cdr3.matches("D").count(),
+//         // n_E: cdr3.matches("E").count(),
+//         // n_F: cdr3.matches("F").count(),
+//         // n_G: cdr3.matches("G").count(),
+//         // n_H: cdr3.matches("H").count(),
+//         // n_I: cdr3.matches("I").count(),
+//         // n_K: cdr3.matches("K").count(),
+//         // n_L: cdr3.matches("L").count(),
+//         // n_M: cdr3.matches("M").count(),
+//         // n_N: cdr3.matches("N").count(),
+//         // n_P: cdr3.matches("P").count(),
+//         // n_Q: cdr3.matches("Q").count(),
+//         // n_R: cdr3.matches("R").count(),
+//         // n_S: cdr3.matches("S").count(),
+//         // n_T: cdr3.matches("T").count(),
+//         // n_V: cdr3.matches("V").count(),
+//         // n_W: cdr3.matches("W").count(),
+//         // n_Y: cdr3.matches("Y").count(),
+//         // aliphatic: u64,
+//         // aromatic: u64,
+//         // neutral: u64,
+//         // positive: u64,
+//         // negative: u64,
+//         // invalid: u64,
+//     }
+// }
 
-pub fn get_cdr3_sequences_attributes(cdr3_dict: BTreeMap<String, u64>) -> Vec<CDR3Prop> {
-    let mut tmp = cdr3_dict
-        .par_iter()
-        .map(|cdr3| build_cdr3_struct(cdr3.0.to_string()))
-        .collect::<Vec<CDR3Prop>>();
-    tmp.par_sort_unstable_by_key(|p| p.cdr3.clone());
-    return tmp;
-}
+// pub fn get_cdr3_sequences_attributes(cdr3_dict: BTreeMap<String, u64>) -> Vec<CDR3Prop> {
+//     let mut tmp = cdr3_dict
+//         .par_iter()
+//         .map(|cdr3| build_cdr3_struct(cdr3.0.to_string()))
+//         .collect::<Vec<CDR3Prop>>();
+//     tmp.par_sort_unstable_by_key(|p| p.cdr3.clone());
+//     return tmp;
+// }
 
 pub fn extract_cdr3(mut sequences: Vec<String>) -> Vec<String> {
     lazy_static! {
@@ -240,20 +240,21 @@ pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn write_cdr3_attributes(sequence: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let P = ProteinAnalysis::new(sequence);
+    let mut P = ProteinAnalysis::new(sequence);
+    let mut IP = IsoelectricPoint::new(sequence, None);
     let mut wtr = csv::Writer::from_writer(io::stdout());
     wtr.write_record(&[
-        P.sequence,
+        P.sequence.clone(),
         P.length.to_string(),
-        P.molecular_weight.to_string(),
-        P.aromaticity.to_string(),
-        P.charge_at_pH.to_string(),
-        P.gravy.to_string(),
-        P.instability_index.to_string(),
-        P.isoelectric_point.to_string(),
-        P.secondary_structure_fraction.0.to_string(),
-        P.secondary_structure_fraction.1.to_string(),
-        P.secondary_structure_fraction.2.to_string(),
+        P.molecular_weight().to_string(),
+        P.aromaticity().to_string(),
+        P.charge_at_pH(&mut IP).to_string(),
+        P.gravy().to_string(),
+        P.instability_index().to_string(),
+        P.isoelectric_point(&mut IP).to_string(),
+        P.secondary_structure_fraction().0.to_string(),
+        P.secondary_structure_fraction().1.to_string(),
+        P.secondary_structure_fraction().2.to_string(),
     ])?;
     wtr.flush()?;
     Ok(())

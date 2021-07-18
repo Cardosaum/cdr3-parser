@@ -85,6 +85,7 @@ lazy_static! {
             })
             .collect()
     };
+    static ref DEFAULT_PH: f64 = 7.775;
 }
 
 #[derive(Default, Debug)]
@@ -94,114 +95,133 @@ pub struct IsoelectricPoint {
     pos_pKs: HashMap<String, f64>,
     neg_pKs: HashMap<String, f64>,
     charged_aas_content: HashMap<String, f64>,
-    pub isoeletric_point: f64,
-    pub charge_at_pH: f64,
+    pub isoeletric_point: Option<f64>,
+    pub charge_at_pH: Option<f64>,
 }
 
 impl IsoelectricPoint {
     pub fn new(sequence: &str, pH: Option<f64>) -> Self {
-        let s = sequence.to_ascii_uppercase();
-        let a = IsoelectricPoint::count_amino_acids(&s);
-        let p = IsoelectricPoint::pK_table(&s);
-        let c = IsoelectricPoint::select_charged(&a);
         let mut tmp = IsoelectricPoint {
-            sequence: s,
-            aa_content: a,
-            pos_pKs: p.0,
-            neg_pKs: p.1,
-            charged_aas_content: c,
+            sequence: sequence.to_ascii_uppercase(),
             ..Default::default()
         };
-        let i = IsoelectricPoint::pi(&tmp, pH, None, None);
-        tmp.isoeletric_point = i;
-        tmp.charge_at_pH = tmp.charge_at_pH(pH.unwrap_or(7.775));
+        tmp.count_amino_acids();
+        tmp.pK_table();
+        tmp.select_charged();
+        tmp.charge_at_pH(pH);
+        tmp.pi(pH, None, None);
         tmp
     }
 
-    fn count_amino_acids(sequence: &String) -> HashMap<char, usize> {
-        let mut aa: HashMap<char, usize> = HashMap::with_capacity(20); // There is only 20 valid amino acids
-        for c in sequence.chars() {
-            *aa.entry(c).or_insert(0) += 1;
-        }
-        for c in PROTEIN_LETTERS.chars() {
-            if !aa.contains_key(&c) {
-                aa.insert(c, 0);
+    fn count_amino_acids(&mut self) -> HashMap<char, usize> {
+        if self.aa_content.is_empty() {
+            let mut aa: HashMap<char, usize> = HashMap::with_capacity(20); // There is only 20 valid amino acids
+            for c in self.sequence.chars() {
+                *aa.entry(c).or_insert(0) += 1;
             }
-        }
-        aa
-    }
-
-    fn pK_table(sequence: &String) -> (HashMap<String, f64>, HashMap<String, f64>) {
-        let mut pos_pKs: HashMap<String, f64> = POSITIVE_PKS.clone();
-        let mut neg_pKs: HashMap<String, f64> = NEGATIVE_PKS.clone();
-        let nterm = sequence
-            .chars()
-            .last()
-            .expect("Sequence was empty")
-            .to_string();
-        let cterm = sequence
-            .chars()
-            .rev()
-            .last()
-            .expect("Sequence was empty")
-            .to_string();
-        let mut pKnterminal = PKNTERMINAL.clone();
-        let mut pKcterminal = PKCTERMINAL.clone();
-
-        if let Some(n) = pKnterminal.get_mut(&nterm) {}
-        if let Some(n) = pKcterminal.get_mut(&cterm) {
-            *n = neg_pKs.get("Cterm").expect("Failed to get 'Cterm'").clone();
-        }
-
-        return (pos_pKs, neg_pKs);
-    }
-
-    fn select_charged(aa_content: &HashMap<char, usize>) -> HashMap<String, f64> {
-        let mut charged: HashMap<String, f64> = HashMap::new();
-        for aa in CHARGED_AAS.iter() {
-            if let Some(v) = aa_content.get(&aa) {
-                charged.insert(aa.to_string(), (*v) as f64);
+            for c in PROTEIN_LETTERS.chars() {
+                if !aa.contains_key(&c) {
+                    aa.insert(c, 0);
+                }
             }
+            self.aa_content = aa;
         }
-        charged.insert("Nterm".to_owned(), 1.0);
-        charged.insert("Cterm".to_owned(), 1.0);
-        charged
+        return self.aa_content.clone();
     }
 
-    pub fn charge_at_pH(&self, pH: f64) -> f64 {
-        let mut positive_charge: f64 = 0.0;
-        for (aa, pK) in &self.pos_pKs {
-            let partial_charge: f64 = 1.0_f64 / (10.0_f64.powf(pH - pK) + 1.0_f64);
-            positive_charge += self
-                .charged_aas_content
-                .get(aa)
-                .expect("Failed to retrive amino acid charge")
-                * partial_charge;
-        }
+    fn pK_table(&mut self) -> (HashMap<String, f64>, HashMap<String, f64>) {
+        if self.pos_pKs.is_empty() || self.neg_pKs.is_empty() {
+            let mut pos_pKs: HashMap<String, f64> = POSITIVE_PKS.clone();
+            let mut neg_pKs: HashMap<String, f64> = NEGATIVE_PKS.clone();
+            let nterm = self
+                .sequence
+                .chars()
+                .last()
+                .expect("Sequence was empty")
+                .to_string();
+            let cterm = self
+                .sequence
+                .chars()
+                .rev()
+                .last()
+                .expect("Sequence was empty")
+                .to_string();
+            let mut pKnterminal = PKNTERMINAL.clone();
+            let mut pKcterminal = PKCTERMINAL.clone();
 
-        let mut negative_charge: f64 = 0.0;
-        for (aa, pK) in &self.neg_pKs {
-            let partial_charge: f64 = 1.0_f64 / (10.0_f64.powf(pK - pH) + 1.0_f64);
-            negative_charge += self
-                .charged_aas_content
-                .get(aa)
-                .expect("Failed to retrive amino acid charge")
-                * partial_charge;
-        }
-        return positive_charge - negative_charge;
-    }
-
-    fn pi(&self, mut pH: Option<f64>, mut min_: Option<f64>, mut max_: Option<f64>) -> f64 {
-        let mut charge = IsoelectricPoint::charge_at_pH(&self, pH.unwrap_or(7.775));
-        while max_.unwrap_or(12.0) - min_.unwrap_or(4.05) > 0.0001_f64 {
-            if charge > 0.0 {
-                min_ = Some(pH.unwrap_or(7.775));
-            } else {
-                max_ = Some(pH.unwrap_or(7.775));
+            if let Some(n) = pKnterminal.get_mut(&nterm) {}
+            if let Some(n) = pKcterminal.get_mut(&cterm) {
+                *n = neg_pKs.get("Cterm").expect("Failed to get 'Cterm'").clone();
             }
-            pH = Some((max_.unwrap_or(12.0) + min_.unwrap_or(4.05)) / 2_f64);
-            charge = IsoelectricPoint::charge_at_pH(&self, pH.unwrap_or(7.775));
+            self.pos_pKs = pos_pKs;
+            self.neg_pKs = neg_pKs;
         }
-        return pH.expect("Failed to compute Isoeletric Point");
+        return (self.pos_pKs.clone(), self.neg_pKs.clone());
+    }
+
+    fn select_charged(&mut self) -> HashMap<String, f64> {
+        if self.charged_aas_content.is_empty() {
+            let mut charged: HashMap<String, f64> = HashMap::new();
+            for aa in CHARGED_AAS.iter() {
+                if let Some(v) = self.aa_content.get(&aa) {
+                    charged.insert(aa.to_string(), (*v) as f64);
+                }
+            }
+            charged.insert("Nterm".to_owned(), 1.0);
+            charged.insert("Cterm".to_owned(), 1.0);
+            self.charged_aas_content = charged;
+        }
+        return self.charged_aas_content.clone();
+    }
+
+    pub fn charge_at_pH(&mut self, mut pH: Option<f64>) -> f64 {
+        if self.charge_at_pH.is_none() {
+            pH = match pH {
+                Some(p) => Some(p),
+                None => Some(*DEFAULT_PH),
+            };
+            let mut positive_charge: f64 = 0.0;
+            for (aa, pK) in &self.pos_pKs {
+                let partial_charge: f64 =
+                    1.0_f64 / (10.0_f64.powf(pH.unwrap_or(*DEFAULT_PH) - pK) + 1.0_f64);
+                positive_charge += self
+                    .charged_aas_content
+                    .get(aa)
+                    .expect("Failed to retrive amino acid charge")
+                    * partial_charge;
+            }
+
+            let mut negative_charge: f64 = 0.0;
+            for (aa, pK) in &self.neg_pKs {
+                let partial_charge: f64 =
+                    1.0_f64 / (10.0_f64.powf(pK - pH.unwrap_or(*DEFAULT_PH)) + 1.0_f64);
+                negative_charge += self
+                    .charged_aas_content
+                    .get(aa)
+                    .expect("Failed to retrive amino acid charge")
+                    * partial_charge;
+            }
+
+            self.charge_at_pH = Some(positive_charge - negative_charge);
+        }
+
+        return self.charge_at_pH.unwrap();
+    }
+
+    pub fn pi(&mut self, mut pH: Option<f64>, mut min_: Option<f64>, mut max_: Option<f64>) -> f64 {
+        if self.isoeletric_point.is_none() {
+            let mut charge = self.charge_at_pH(pH);
+            while max_.unwrap_or(12.0) - min_.unwrap_or(4.05) > 0.0001_f64 {
+                if charge > 0.0 {
+                    min_ = Some(pH.unwrap_or(*DEFAULT_PH));
+                } else {
+                    max_ = Some(pH.unwrap_or(*DEFAULT_PH));
+                }
+                pH = Some((max_.unwrap_or(12.0) + min_.unwrap_or(4.05)) / 2_f64);
+                charge = self.charge_at_pH(pH);
+            }
+            self.isoeletric_point = Some(pH.expect("Failed to compute Isoeletric Point"));
+        }
+        return self.isoeletric_point.unwrap();
     }
 }

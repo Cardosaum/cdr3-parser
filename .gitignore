@@ -4,5 +4,5 @@
 tmp/
 
 target/
-out_aafreq.txt
+out*.txt
 data/

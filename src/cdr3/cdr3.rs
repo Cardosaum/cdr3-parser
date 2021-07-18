@@ -205,7 +205,7 @@ pub fn aa_groups<'seq>(sequence: String) -> BTreeMap<String, HashSet<&'seq str>>
 //     return tmp;
 // }
 
-pub fn extract_cdr3(mut sequences: Vec<String>) -> Vec<String> {
+pub fn extract_cdr3(mut sequences: Vec<String>) -> HashSet<String> {
     lazy_static! {
         static ref CDR3_REGEX: Regex =
             Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").unwrap();
@@ -216,7 +216,13 @@ pub fn extract_cdr3(mut sequences: Vec<String>) -> Vec<String> {
         *s = String::from(cdr3.get(7).map_or("", |m| m.as_str()));
     });
 
-    return sequences;
+    let mut distinct_sequences: HashSet<String> = HashSet::new();
+
+    for i in sequences {
+        distinct_sequences.insert(i);
+    }
+
+    return distinct_sequences;
 }
 
 // pub fn write_cdr3_attributes(cdr3_attributes: Vec<CDR3Prop>, output_file: PathBuf) -> Result<()> {

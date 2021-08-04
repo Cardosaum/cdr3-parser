@@ -207,7 +207,7 @@ pub fn aa_groups<'seq>(sequence: String) -> BTreeMap<String, HashSet<&'seq str>>
 //     return tmp;
 // }
 
-pub fn extract_cdr3(mut sequences: Vec<String>) -> HashSet<String> {
+pub fn extract_cdr3(mut sequences: Vec<String>) -> HashMap<String, usize> {
     lazy_static! {
         static ref CDR3_REGEX: Regex =
             Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").expect("extract cdr3 1");
@@ -218,10 +218,11 @@ pub fn extract_cdr3(mut sequences: Vec<String>) -> HashSet<String> {
         *s = String::from(cdr3.get(7).map_or("", |m| m.as_str()));
     });
 
-    let mut distinct_sequences: HashSet<String> = HashSet::new();
+    let mut distinct_sequences: HashMap<String, usize> = HashMap::new();
 
     for i in sequences {
-        distinct_sequences.insert(i);
+        // distinct_sequences.insert(i);
+        *distinct_sequences.entry(i).or_insert(0) += 1;
     }
 
     return distinct_sequences;
@@ -232,6 +233,7 @@ pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
     let mut wtr = csv::Writer::from_writer(io::stdout());
     wtr.write_record(&[
         "sequence",
+        "quantity",
         "length",
         "molecular_weight",
         "aromaticity",
@@ -242,17 +244,22 @@ pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
         "ssf_helix",
         "ssf_turn",
         "ssf_sheet",
-    ])?;
-    wtr.flush()?;
+    ])
+    .expect("failed to write record header");
+    wtr.flush().expect("failed to flush header");
     Ok(())
 }
 
-pub fn write_cdr3_attributes(sequence: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn write_cdr3_attributes(
+    sequence: &str,
+    quantity: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut P = ProteinAnalysis::new(sequence);
     let mut IP = IsoelectricPoint::new(sequence, None);
     let mut wtr = csv::Writer::from_writer(io::stdout());
     wtr.write_record(&[
         P.sequence.clone(),
+        quantity.to_string(),
         P.length.to_string(),
         P.molecular_weight().to_string(),
         P.aromaticity().to_string(),
@@ -263,8 +270,9 @@ pub fn write_cdr3_attributes(sequence: &str) -> Result<(), Box<dyn std::error::E
         P.secondary_structure_fraction().0.to_string(),
         P.secondary_structure_fraction().1.to_string(),
         P.secondary_structure_fraction().2.to_string(),
-    ])?;
-    wtr.flush()?;
+    ])
+    .expect("failed to write cdr3 attribute");
+    wtr.flush().expect("failed to flush cdr3 attribute");
     Ok(())
 }
 
@@ -293,9 +301,16 @@ fn parse_file(mut input_file: PathBuf) -> Vec<String> {
 pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let sequences = extract_cdr3(parse_file(input_file));
 
-    write_cdr3_header();
-    sequences.par_iter().for_each(|s| {
-        write_cdr3_attributes(s);
+    match write_cdr3_header() {
+        Ok(_) => (),
+        Err(e) => eprintln!("Error writing header: {:?}", e),
+    };
+
+    sequences.par_iter().for_each(|(s, n)| {
+        match write_cdr3_attributes(s, *n) {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error on pipeline: {:?}", e),
+        };
     });
 
     Ok(())

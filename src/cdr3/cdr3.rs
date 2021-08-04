@@ -89,7 +89,9 @@ pub fn molecular_weight(sequence: &str) -> f64 {
 
     sequence.bytes().for_each(|c| {
         // println!("{}", c);
-        let aa = match monoisotopic_protein_weights.get_key_value(&str::from_utf8(&[c]).unwrap()) {
+        let aa = match monoisotopic_protein_weights
+            .get_key_value(&str::from_utf8(&[c]).expect("molecular wieght @ cdr3"))
+        {
             Some(aa) => {
                 // println!("{:?}", aa);
                 mw += aa.1;
@@ -208,11 +210,11 @@ pub fn aa_groups<'seq>(sequence: String) -> BTreeMap<String, HashSet<&'seq str>>
 pub fn extract_cdr3(mut sequences: Vec<String>) -> HashSet<String> {
     lazy_static! {
         static ref CDR3_REGEX: Regex =
-            Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").unwrap();
+            Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").expect("extract cdr3 1");
     }
 
     sequences.par_iter_mut().for_each(|s| {
-        let cdr3 = CDR3_REGEX.captures(&s).unwrap();
+        let cdr3 = CDR3_REGEX.captures(&s).expect("extract cdr3 2");
         *s = String::from(cdr3.get(7).map_or("", |m| m.as_str()));
     });
 

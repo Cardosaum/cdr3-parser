@@ -243,7 +243,10 @@ impl ProteinAnalysis {
             }
             self.amino_acids_content = Some(aa);
         }
-        return self.amino_acids_content.clone().unwrap();
+        return self
+            .amino_acids_content
+            .clone()
+            .expect("Failed in count_amino_acids");
     }
 
     pub fn get_amino_acids_percent(&mut self) -> HashMap<char, f64> {
@@ -262,7 +265,10 @@ impl ProteinAnalysis {
             }
             self.amino_acids_percent = Some(aa_percent);
         }
-        return self.amino_acids_percent.clone().unwrap();
+        return self
+            .amino_acids_percent
+            .clone()
+            .expect("failed in get_amino_acids_perceent");
     }
 
     pub fn molecular_weight(&mut self) -> f64 {
@@ -277,7 +283,7 @@ impl ProteinAnalysis {
             weight -= (&self.length - 1) as f64 * water;
             self.molecular_weight = Some(weight);
         }
-        return self.molecular_weight.unwrap();
+        return self.molecular_weight.expect("failed in molecular_weight");
     }
 
     pub fn aromaticity(&mut self) -> f64 {
@@ -292,7 +298,7 @@ impl ProteinAnalysis {
                 .collect();
             self.aromaticity = Some(a.iter().sum());
         }
-        return self.aromaticity.unwrap();
+        return self.aromaticity.expect("failed in aromaticity");
     }
 
     pub fn instability_index(&mut self) -> f64 {
@@ -301,14 +307,18 @@ impl ProteinAnalysis {
             let mut score = 0.0_f64;
 
             for i in 0..(self.length - 1) {
-                let this = self.sequence.chars().nth(i).unwrap();
-                let next = self.sequence.chars().nth(i + 1).unwrap();
+                let this = self.sequence.chars().nth(i).expect("instability index 1");
+                let next = self
+                    .sequence
+                    .chars()
+                    .nth(i + 1)
+                    .expect("instability index 2");
                 let dipeptide_value = index[&this][&next];
                 score += dipeptide_value;
             }
             self.instability_index = Some((10.0_f64 / self.length as f64) * score);
         }
-        return self.instability_index.unwrap();
+        return self.instability_index.expect("instability index 3");
     }
 
     pub fn flexibility(&mut self) -> Vec<f64> {
@@ -319,16 +329,25 @@ impl ProteinAnalysis {
             let mut scores: Vec<f64> = Vec::with_capacity(self.length - window_size);
 
             for i in 0..(self.length - window_size) {
-                let subsequence: &str = self.sequence.get(i..(i + window_size)).unwrap();
+                let subsequence: &str = self
+                    .sequence
+                    .get(i..(i + window_size))
+                    .expect("flexibility 1");
                 let mut score: f64 = 0.0;
 
                 for j in 0..(window_size / 2) {
-                    let front: char = subsequence.chars().nth(j).unwrap();
-                    let back: char = subsequence.chars().nth(window_size - j - 1).unwrap();
+                    let front: char = subsequence.chars().nth(j).expect("flexibility 2");
+                    let back: char = subsequence
+                        .chars()
+                        .nth(window_size - j - 1)
+                        .expect("flexibility 3");
                     score += (flexibilities[&front] + flexibilities[&back]) * weights[j];
                 }
 
-                let middle: char = subsequence.chars().nth(window_size / 2 + 1).unwrap();
+                let middle: char = subsequence
+                    .chars()
+                    .nth(window_size / 2 + 1)
+                    .expect("flexibility 4");
                 score += flexibilities[&middle];
                 scores.push(score / 5.25);
             }
@@ -337,7 +356,7 @@ impl ProteinAnalysis {
         } else {
             self.flexibility = Some(Vec::<f64>::new());
         }
-        return self.flexibility.clone().unwrap();
+        return self.flexibility.clone().expect("flexibility 5");
     }
 
     pub fn gravy(&mut self) -> f64 {
@@ -346,21 +365,21 @@ impl ProteinAnalysis {
             let g: f64 = self.sequence.chars().into_iter().map(|c| scale[&c]).sum();
             self.gravy = Some(g / self.length as f64);
         }
-        return self.gravy.unwrap();
+        return self.gravy.expect("gravy");
     }
 
     pub fn isoelectric_point(&mut self, IP: &mut IsoelectricPoint) -> f64 {
         if self.isoelectric_point.is_none() {
             self.isoelectric_point = Some(IP.pi(None, None, None));
         }
-        return self.isoelectric_point.unwrap();
+        return self.isoelectric_point.expect("isoeletric_point");
     }
 
     pub fn charge_at_pH(&mut self, IP: &mut IsoelectricPoint) -> f64 {
         if self.charge_at_pH.is_none() {
             self.charge_at_pH = Some(IP.charge_at_pH(None));
         }
-        return self.charge_at_pH.unwrap();
+        return self.charge_at_pH.expect("charge at ph");
     }
 
     pub fn secondary_structure_fraction(&mut self) -> (f64, f64, f64) {
@@ -379,7 +398,9 @@ impl ProteinAnalysis {
                 .sum();
             self.secondary_structure_fraction = Some((helix, turn, sheet));
         }
-        return self.secondary_structure_fraction.unwrap();
+        return self
+            .secondary_structure_fraction
+            .expect("secondary structure");
     }
 
     pub fn molar_extinction_coefficient(&mut self) -> (usize, usize) {
@@ -389,6 +410,6 @@ impl ProteinAnalysis {
             let mec_cystines: usize = mec_reduced + (num_aa[&'C'] / 2) * 125;
             self.molar_extinction_coefficient = Some((mec_reduced, mec_cystines));
         }
-        return self.molar_extinction_coefficient.unwrap();
+        return self.molar_extinction_coefficient.expect("molar extinction");
     }
 }

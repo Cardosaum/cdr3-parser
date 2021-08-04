@@ -205,7 +205,7 @@ impl IsoelectricPoint {
             self.charge_at_pH = Some(positive_charge - negative_charge);
         }
 
-        return self.charge_at_pH.unwrap();
+        return self.charge_at_pH.expect("chage at ph @ ip.rs");
     }
 
     pub fn pi(&mut self, mut pH: Option<f64>, mut min_: Option<f64>, mut max_: Option<f64>) -> f64 {
@@ -222,6 +222,6 @@ impl IsoelectricPoint {
             }
             self.isoeletric_point = Some(pH.expect("Failed to compute Isoeletric Point"));
         }
-        return self.isoeletric_point.unwrap();
+        return self.isoeletric_point.expect("pi @ ip.rs");
     }
 }

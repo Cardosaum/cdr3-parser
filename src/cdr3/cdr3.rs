@@ -317,7 +317,7 @@ pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::
     };
 
     sequences.par_iter().for_each(|(s, n)| {
-        if !is_valid_cdr3(s) {
+        if is_valid_cdr3(s) {
             match write_cdr3_attributes(s, *n) {
                 Ok(_) => (),
                 Err(e) => eprintln!("Error on pipeline: {:?}", e),

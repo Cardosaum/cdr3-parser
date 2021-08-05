@@ -278,7 +278,7 @@ impl ProteinAnalysis {
             for c in self.sequence.chars() {
                 weight += PROTEIN_WEIGHTS
                     .get(&c)
-                    .expect("failed to retriece protein weight")
+                    .expect("failed to retrieve protein weight")
             }
             weight -= (&self.length - 1) as f64 * water;
             self.molecular_weight = Some(weight);

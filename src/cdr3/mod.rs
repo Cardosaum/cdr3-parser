@@ -10,5 +10,5 @@ pub mod prelude {
         write_cdr3_attributes, CDR3Prop,
     };
     pub use crate::cdr3::isoelectric_point::IsoelectricPoint;
-    pub use crate::cdr3::protein_analysis::ProteinAnalysis;
+    pub use crate::cdr3::protein_analysis::{ProteinAnalysis, PROTEIN_WEIGHTS};
 }

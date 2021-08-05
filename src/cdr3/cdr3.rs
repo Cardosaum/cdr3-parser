@@ -298,6 +298,16 @@ fn parse_file(mut input_file: PathBuf) -> Vec<String> {
     return seqs;
 }
 
+fn is_valid_cdr3(sequence: &str) -> bool {
+    for c in sequence.chars() {
+        match PROTEIN_WEIGHTS.get(&c) {
+            Some(_) => (),
+            None => return false,
+        };
+    }
+    return true;
+}
+
 pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let sequences = extract_cdr3(parse_file(input_file));
 
@@ -307,10 +317,14 @@ pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::
     };
 
     sequences.par_iter().for_each(|(s, n)| {
-        match write_cdr3_attributes(s, *n) {
-            Ok(_) => (),
-            Err(e) => eprintln!("Error on pipeline: {:?}", e),
-        };
+        if !is_valid_cdr3(s) {
+            match write_cdr3_attributes(s, *n) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error on pipeline: {:?}", e),
+            };
+            // TODO: create a log flag to save all invalid sequences into a file (?)
+            // println!("{:?}", s);
+        }
     });
 
     Ok(())

@@ -7,7 +7,7 @@ pub fn build_app() -> App<'static, 'static> {
         AppSettings::ColorNever
     };
 
-    let mut app = App::new("cdr3-parser")
+    let app = App::new("cdr3-parser")
         .version(crate_version!())
         .setting(clap_color_setting)
         .about("Convert a `aafreq` file into a tidy csv with chemical properties of the sequences")

@@ -8,6 +8,7 @@ extern crate velcro;
 mod app;
 mod cdr3;
 
+use app::OutputFormat;
 use cdr3::prelude::*;
 
 use clap::{App, Arg, Error, SubCommand};
@@ -25,26 +26,26 @@ fn main() {
     match matches.value_of("INPUT_FILE") {
         Some(input_file) => {
             if !Path::new(input_file).is_file() {
-                println!("`{}` must be a valid file.", input_file);
+                println!("\n`{}` must be a valid file.\n", input_file);
                 std::process::exit(1);
             }
         }
         None => {}
     }
 
-    match matches.value_of("OUTPUT_FILE") {
-        Some(output_file) => {
-            if Path::new(output_file).is_file() && matches.is_present("no-clobber") {
-                println!("File `{}` exists, aborting.", output_file);
-                std::process::exit(2);
-            }
-            if Path::new(output_file).is_dir() {
-                println!("`{}` is a directory, aborting.", output_file);
-                std::process::exit(3);
-            }
-        }
-        None => {}
-    }
+    // match matches.value_of("OUTPUT_FILE") {
+    //     Some(output_file) => {
+    //         if Path::new(output_file).is_file() && matches.is_present("no-clobber") {
+    //             println!("File `{}` exists, aborting.", output_file);
+    //             std::process::exit(2);
+    //         }
+    //         if Path::new(output_file).is_dir() {
+    //             println!("`{}` is a directory, aborting.", output_file);
+    //             std::process::exit(3);
+    //         }
+    //     }
+    //     None => {}
+    // }
 
     let input_file = PathBuf::from(
         matches
@@ -52,55 +53,21 @@ fn main() {
             .get_or_insert("INPUT_FILE")
             .to_string(),
     );
-    let output_file = PathBuf::from(
-        matches
-            .value_of("OUTPUT_FILE")
-            .get_or_insert("OUTPUT_FILE")
-            .to_string(),
-    );
 
-    // // let cdr3_dict = extract_cdr3(input_file, output_file);
+    let output_format = match matches.is_present("json") {
+        true => OutputFormat::Json,
+        false => OutputFormat::Csv,
+    };
 
-    // let mut cdr3_dict = create_cdr3_dict(sequences);
-    // let cdr3_prop = build_cdr3_struct(cdr3_dict.first_entry().unwrap().key().to_string());
-    // // println!("{}", molecular_weight(&cdr3_prop.cdr3));
-    // // println!("{}", aromaticity(&cdr3_prop.cdr3));
-    // // println!("{:?}", cdr3_prop);
-
-    // // println!("{:?}", cdr3_prop.cdr3);
-    // // println!("{:?}", &cdr3_dict.first_entry().unwrap().key());
-    // // println!("{:?}", &cdr3_dict);
-
-    // let mut cdr3_sequences_attributes = get_cdr3_sequences_attributes(cdr3_dict);
-
-    // // for x in cdr3_sequences_attributes {
-    // //     println!("{:}", x.cdr3);
-    // // }
-
-    // // cdr3_dict.into_par_iter().map(|cdr3| {build_cdr3_struct(cdr3.0.to_string())}).collect_into_vec(cdr3_sequences_attributes);
-
-    // // for cdr3_sequence in cdr3_dict {
-    // //     // println!("{:?}", cdr3_sequence);
-    // //     let m = build_cdr3_struct(cdr3_sequence.0);
-    // //     println!("{:?}", m);
-    // // }
-
-    // // aa_groups("SAGTKJLAS".to_string());
-
-    // write_cdr3_attributes(cdr3_sequences_attributes, output_file);
-    // //
-    // println!("{:?}", IsoelectricPoint::new("GATTACA", None));
-    // println!("{:?}", IsoelectricPoint::new("FIVESK", None));
-
-    // println!("{:?}", ProteinAnalysis::new("FIVESK").molecular_weight);
-    // println!("{:?}", ProteinAnalysis::new("GATTACA").molecular_weight);
-    // println!(
-    //     "{:?}",
-    //     ProteinAnalysis::new("FIVESKVIESLTY").molecular_weight
+    // let output_file = PathBuf::from(
+    //     matches
+    //         .value_of("OUTPUT_FILE")
+    //         .get_or_insert("OUTPUT_FILE")
+    //         .to_string(),
     // );
 
-    pipeline_cdr3(input_file);
-    //
-    // let P = ProteinAnalysis::new("FIVESKVIESLTY");
-    // println!("\n{}\n", json!(&P).to_string());
+    match pipeline_cdr3(input_file, output_format) {
+        Ok(_) => (),
+        Err(e) => eprintln!("Error while processing input file: {}", e),
+    }
 }

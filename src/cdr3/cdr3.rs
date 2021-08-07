@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::{env, str};
 use velcro::hash_map;
 
+use crate::app::OutputFormat;
 use crate::cdr3::prelude::*;
 
 #[serde_as]
@@ -253,6 +254,7 @@ pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
 pub fn write_cdr3_attributes(
     sequence: &str,
     quantity: usize,
+    output_format: &OutputFormat,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut P = ProteinAnalysis::new(sequence, quantity, None);
     if output_format == &OutputFormat::Json {
@@ -311,17 +313,22 @@ fn is_valid_cdr3(sequence: &str) -> bool {
     return true;
 }
 
-pub fn pipeline_cdr3(mut input_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+pub fn pipeline_cdr3(
+    input_file: PathBuf,
+    output_format: OutputFormat,
+) -> Result<(), Box<dyn std::error::Error>> {
     let sequences = extract_cdr3(parse_file(input_file));
 
-    match write_cdr3_header() {
-        Ok(_) => (),
-        Err(e) => eprintln!("Error writing header: {:?}", e),
-    };
+    if output_format == OutputFormat::Csv {
+        match write_cdr3_header() {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error writing header: {:?}", e),
+        };
+    }
 
     sequences.par_iter().for_each(|(s, n)| {
         if is_valid_cdr3(s) {
-            match write_cdr3_attributes(s, *n) {
+            match write_cdr3_attributes(s, *n, &output_format) {
                 Ok(_) => (),
                 Err(e) => eprintln!("Error on pipeline: {:?}", e),
             };

@@ -3,7 +3,7 @@
 // all rights reserved to the original authors.
 //
 
-use crate::cdr3::isoelectric_point::IsoelectricPoint;
+// use crate::cdr3::isoelectric_point::IsoelectricPoint;
 use lazy_static::lazy_static;
 use num::pow;
 use serde::Serialize;
@@ -188,33 +188,88 @@ lazy_static! {
             .collect()
     };
 
+    static ref POSITIVE_PKS: HashMap<String, f64> = {
+        [("Nterm", 7.5), ("K", 10.0), ("R", 12.0), ("H", 5.98)]
+            .iter()
+            .map(|(s, v)| (s.to_string(), *v))
+            .collect()
+    };
+    static ref NEGATIVE_PKS: HashMap<String, f64> = {
+        [
+            ("Cterm", 3.55),
+            ("D", 4.05),
+            ("E", 4.45),
+            ("C", 9.0),
+            ("Y", 10.0),
+        ]
+        .iter()
+        .map(|(s, v)| (s.to_string(), *v))
+        .collect()
+    };
+    static ref PKCTERMINAL: HashMap<String, f64> = {
+        [("D", 4.55), ("E", 4.75)]
+            .iter()
+            .map(|(s, v)| (s.to_string(), *v))
+            .collect()
+    };
+    static ref PKNTERMINAL: HashMap<String, f64> = {
+        [
+            ("A", 7.59),
+            ("M", 7.0),
+            ("S", 6.93),
+            ("P", 8.36),
+            ("T", 6.82),
+            ("V", 7.44),
+            ("E", 7.7),
+        ]
+        .iter()
+        .map(|(s, v)| (s.to_string(), *v))
+        .collect()
+    };
+    static ref CHARGED_AAS: HashSet<char> = {
+        ["K", "R", "H", "D", "E", "C", "Y"]
+            .iter()
+            .map(|s| {
+                s.to_string()
+                    .chars()
+                    .next()
+                    .expect("Failed to generate Hashset")
+            })
+            .collect()
+    };
+    static ref DEFAULT_PH: f64 = 7.775;
+
 }
 
 #[derive(Default, Debug, Serialize)]
 pub struct ProteinAnalysis {
-    pub sequence: String,
     pub amino_acids_content: Option<HashMap<char, usize>>,
     pub amino_acids_percent: Option<HashMap<char, f64>>,
-    pub length: usize,
-    pub molecular_weight: Option<f64>,
     pub aromaticity: Option<f64>,
-    pub instability_index: Option<f64>,
+    pub charge_at_pH: Option<f64>,
+    pub charged_aas_content: HashMap<String, f64>,
     pub flexibility: Option<Vec<f64>>,
     pub gravy: Option<f64>,
+    pub instability_index: Option<f64>,
     pub isoelectric_point: Option<f64>,
-    pub charge_at_pH: Option<f64>,
-    pub secondary_structure_fraction: Option<(f64, f64, f64)>,
+    pub length: usize,
     pub molar_extinction_coefficient: Option<(usize, usize)>,
+    pub molecular_weight: Option<f64>,
+    pub neg_pKs: HashMap<String, f64>,
+    pub pos_pKs: HashMap<String, f64>,
+    pub quantity: usize,
+    pub secondary_structure_fraction: Option<(f64, f64, f64)>,
+    pub sequence: String,
 }
 
 impl ProteinAnalysis {
-    pub fn new(sequence: &str) -> Self {
+    pub fn new(sequence: &str, quantity: usize, mut pH: Option<f64>) -> Self {
         let mut PA = ProteinAnalysis {
             sequence: sequence.to_owned(),
             length: sequence.chars().count(),
+            quantity,
             ..Default::default()
         };
-        let mut IP = IsoelectricPoint::new(sequence, None);
         PA.count_amino_acids();
         PA.get_amino_acids_percent();
         PA.aromaticity();
@@ -222,8 +277,8 @@ impl ProteinAnalysis {
         PA.instability_index();
         PA.flexibility();
         PA.gravy();
-        PA.isoelectric_point(&mut IP);
-        PA.charge_at_pH(&mut IP);
+        PA.isoelectric_point(pH, None, None);
+        PA.charge_at_pH(pH);
         PA.secondary_structure_fraction();
         PA.molar_extinction_coefficient();
         PA
@@ -368,18 +423,38 @@ impl ProteinAnalysis {
         return self.gravy.expect("gravy");
     }
 
-    pub fn isoelectric_point(&mut self, IP: &mut IsoelectricPoint) -> f64 {
-        if self.isoelectric_point.is_none() {
-            self.isoelectric_point = Some(IP.pi(None, None, None));
-        }
-        return self.isoelectric_point.expect("isoeletric_point");
-    }
-
-    pub fn charge_at_pH(&mut self, IP: &mut IsoelectricPoint) -> f64 {
+    pub fn charge_at_pH(&mut self, mut pH: Option<f64>) -> f64 {
         if self.charge_at_pH.is_none() {
-            self.charge_at_pH = Some(IP.charge_at_pH(None));
+            pH = match pH {
+                Some(p) => Some(p),
+                None => Some(*DEFAULT_PH),
+            };
+            let mut positive_charge: f64 = 0.0;
+            for (aa, pK) in &self.pos_pKs {
+                let partial_charge: f64 =
+                    1.0_f64 / (10.0_f64.powf(pH.unwrap_or(*DEFAULT_PH) - pK) + 1.0_f64);
+                positive_charge += self
+                    .charged_aas_content
+                    .get(aa)
+                    .expect("Failed to retrive amino acid charge")
+                    * partial_charge;
+            }
+
+            let mut negative_charge: f64 = 0.0;
+            for (aa, pK) in &self.neg_pKs {
+                let partial_charge: f64 =
+                    1.0_f64 / (10.0_f64.powf(pK - pH.unwrap_or(*DEFAULT_PH)) + 1.0_f64);
+                negative_charge += self
+                    .charged_aas_content
+                    .get(aa)
+                    .expect("Failed to retrive amino acid charge")
+                    * partial_charge;
+            }
+
+            self.charge_at_pH = Some(positive_charge - negative_charge);
         }
-        return self.charge_at_pH.expect("charge at ph");
+
+        return self.charge_at_pH.expect("chage at ph @ ip.rs");
     }
 
     pub fn secondary_structure_fraction(&mut self) -> (f64, f64, f64) {
@@ -411,5 +486,80 @@ impl ProteinAnalysis {
             self.molar_extinction_coefficient = Some((mec_reduced, mec_cystines));
         }
         return self.molar_extinction_coefficient.expect("molar extinction");
+    }
+
+    fn pK_table(&mut self) -> (HashMap<String, f64>, HashMap<String, f64>) {
+        if self.pos_pKs.is_empty() || self.neg_pKs.is_empty() {
+            let mut pos_pKs: HashMap<String, f64> = POSITIVE_PKS.clone();
+            let mut neg_pKs: HashMap<String, f64> = NEGATIVE_PKS.clone();
+            let nterm = self
+                .sequence
+                .chars()
+                .last()
+                .expect("Sequence was empty")
+                .to_string();
+            let cterm = self
+                .sequence
+                .chars()
+                .rev()
+                .last()
+                .expect("Sequence was empty")
+                .to_string();
+            let mut pKnterminal = PKNTERMINAL.clone();
+            let mut pKcterminal = PKCTERMINAL.clone();
+
+            if let Some(n) = pKnterminal.get_mut(&nterm) {}
+            if let Some(n) = pKcterminal.get_mut(&cterm) {
+                *n = neg_pKs.get("Cterm").expect("Failed to get 'Cterm'").clone();
+            }
+            self.pos_pKs = pos_pKs;
+            self.neg_pKs = neg_pKs;
+        }
+        return (self.pos_pKs.clone(), self.neg_pKs.clone());
+    }
+
+    fn select_charged(&mut self) -> HashMap<String, f64> {
+        if self.charged_aas_content.is_empty() {
+            let mut charged: HashMap<String, f64> = HashMap::new();
+            if !self.amino_acids_content.is_some() {
+                self.count_amino_acids();
+            }
+            for aa in CHARGED_AAS.iter() {
+                if let Some(v) = self
+                    .amino_acids_content
+                    .as_ref()
+                    .expect("failed to retrieve amino_acids_content @ select_charged")
+                    .get(&aa)
+                {
+                    charged.insert(aa.to_string(), (*v) as f64);
+                }
+            }
+            charged.insert("Nterm".to_owned(), 1.0);
+            charged.insert("Cterm".to_owned(), 1.0);
+            self.charged_aas_content = charged;
+        }
+        return self.charged_aas_content.clone();
+    }
+
+    pub fn isoelectric_point(
+        &mut self,
+        mut pH: Option<f64>,
+        mut min_: Option<f64>,
+        mut max_: Option<f64>,
+    ) -> f64 {
+        if self.isoelectric_point.is_none() {
+            let mut charge = self.charge_at_pH(pH);
+            while max_.unwrap_or(12.0) - min_.unwrap_or(4.05) > 0.0001_f64 {
+                if charge > 0.0 {
+                    min_ = Some(pH.unwrap_or(*DEFAULT_PH));
+                } else {
+                    max_ = Some(pH.unwrap_or(*DEFAULT_PH));
+                }
+                pH = Some((max_.unwrap_or(12.0) + min_.unwrap_or(4.05)) / 2_f64);
+                charge = self.charge_at_pH(pH);
+            }
+            self.isoelectric_point = Some(pH.expect("Failed to compute Isoeletric Point"));
+        }
+        return self.isoelectric_point.expect("pi @ ip.rs");
     }
 }

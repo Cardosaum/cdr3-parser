@@ -31,6 +31,7 @@
 
 use lazy_static::lazy_static;
 use num::pow;
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
 use crate::cdr3::protein_analysis::PROTEIN_LETTERS;
@@ -88,7 +89,7 @@ lazy_static! {
     static ref DEFAULT_PH: f64 = 7.775;
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct IsoelectricPoint {
     sequence: String,
     aa_content: HashMap<char, usize>,

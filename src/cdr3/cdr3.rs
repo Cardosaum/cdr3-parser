@@ -254,25 +254,28 @@ pub fn write_cdr3_attributes(
     sequence: &str,
     quantity: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut P = ProteinAnalysis::new(sequence);
-    let mut IP = IsoelectricPoint::new(sequence, None);
-    let mut wtr = csv::Writer::from_writer(io::stdout());
-    wtr.write_record(&[
-        P.sequence.clone(),
-        quantity.to_string(),
-        P.length.to_string(),
-        P.molecular_weight().to_string(),
-        P.aromaticity().to_string(),
-        P.charge_at_pH(&mut IP).to_string(),
-        P.gravy().to_string(),
-        P.instability_index().to_string(),
-        P.isoelectric_point(&mut IP).to_string(),
-        P.secondary_structure_fraction().0.to_string(),
-        P.secondary_structure_fraction().1.to_string(),
-        P.secondary_structure_fraction().2.to_string(),
-    ])
-    .expect("failed to write cdr3 attribute");
-    wtr.flush().expect("failed to flush cdr3 attribute");
+    let mut P = ProteinAnalysis::new(sequence, quantity, None);
+    if output_format == &OutputFormat::Json {
+        println!("{}", serde_json::json!(P));
+    } else {
+        let mut wtr = csv::Writer::from_writer(io::stdout());
+        wtr.write_record(&[
+            P.sequence.clone(),
+            quantity.to_string(),
+            P.length.to_string(),
+            P.molecular_weight().to_string(),
+            P.aromaticity().to_string(),
+            P.charge_at_pH(None).to_string(),
+            P.gravy().to_string(),
+            P.instability_index().to_string(),
+            P.isoelectric_point(None, None, None).to_string(),
+            P.secondary_structure_fraction().0.to_string(),
+            P.secondary_structure_fraction().1.to_string(),
+            P.secondary_structure_fraction().2.to_string(),
+        ])
+        .expect("failed to write cdr3 attribute");
+        wtr.flush().expect("failed to flush cdr3 attribute");
+    }
     Ok(())
 }
 

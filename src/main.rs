@@ -8,17 +8,11 @@ extern crate velcro;
 mod app;
 mod cdr3;
 
-use app::OutputFormat;
+use app::{InputFormat, OutputFormat};
 use cdr3::prelude::*;
 
-use clap::{App, Arg, Error, SubCommand};
-use csv::Writer;
-use serde_json::json;
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, prelude::*, BufReader};
-use std::iter::FromIterator;
+use std::env;
 use std::path::{Path, PathBuf};
-use std::{env, str};
 
 fn main() {
     let matches = app::build_app().get_matches_from(env::args_os());
@@ -59,6 +53,11 @@ fn main() {
         false => OutputFormat::Csv,
     };
 
+    let input_format = match matches.is_present("cdr-only") {
+        true => InputFormat::CdrOnly,
+        false => InputFormat::Fasta,
+    };
+
     // let output_file = PathBuf::from(
     //     matches
     //         .value_of("OUTPUT_FILE")
@@ -66,7 +65,7 @@ fn main() {
     //         .to_string(),
     // );
 
-    match pipeline_cdr3(input_file, output_format) {
+    match pipeline_cdr3(input_file, input_format, output_format) {
         Ok(_) => (),
         Err(e) => eprintln!("Error while processing input file: {}", e),
     }

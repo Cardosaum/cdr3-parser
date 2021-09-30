@@ -243,11 +243,22 @@ lazy_static! {
 
 #[derive(Default, Debug, Serialize)]
 pub struct ProteinAnalysis {
+    #[serde(skip_serializing)]
+    charged_aas_content: HashMap<String, f64>,
+    #[serde(skip_serializing)]
+    neg_pKs: HashMap<String, f64>,
+    #[serde(skip_serializing)]
+    pos_pKs: HashMap<String, f64>,
+
+    pub aa_aliphatic: usize,
+    pub aa_aromatic: usize,
+    pub aa_negative: usize,
+    pub aa_neutral: usize,
+    pub aa_positive: usize,
     pub amino_acids_content: Option<HashMap<char, usize>>,
     pub amino_acids_percent: Option<HashMap<char, f64>>,
     pub aromaticity: Option<f64>,
     pub charge_at_pH: Option<f64>,
-    pub charged_aas_content: HashMap<String, f64>,
     pub flexibility: Option<Vec<f64>>,
     pub gravy: Option<f64>,
     pub instability_index: Option<f64>,
@@ -255,8 +266,6 @@ pub struct ProteinAnalysis {
     pub length: usize,
     pub molar_extinction_coefficient: Option<(usize, usize)>,
     pub molecular_weight: Option<f64>,
-    pub neg_pKs: HashMap<String, f64>,
-    pub pos_pKs: HashMap<String, f64>,
     pub quantity: usize,
     pub secondary_structure_fraction: Option<(f64, f64, f64)>,
     pub sequence: String,
@@ -281,6 +290,11 @@ impl ProteinAnalysis {
         PA.charge_at_pH(pH);
         PA.secondary_structure_fraction();
         PA.molar_extinction_coefficient();
+        PA.aa_aliphatic();
+        PA.aa_aromatic();
+        PA.aa_neutral();
+        PA.aa_positive();
+        PA.aa_negative();
         PA
     }
 
@@ -343,8 +357,6 @@ impl ProteinAnalysis {
 
     pub fn aromaticity(&mut self) -> f64 {
         if self.aromaticity.is_none() {
-            let aromatic_aas = "YWF";
-            let aromaticity: f64 = 0.0;
             let a: Vec<f64> = self
                 .get_amino_acids_percent()
                 .iter()
@@ -561,5 +573,65 @@ impl ProteinAnalysis {
             self.isoelectric_point = Some(pH.expect("Failed to compute Isoeletric Point"));
         }
         return self.isoelectric_point.expect("pi @ ip.rs");
+    }
+
+    fn aa_aliphatic(&mut self) -> usize {
+        if self.aa_aliphatic == 0 {
+            let aliphatics = ['G', 'A', 'P', 'V', 'L', 'I', 'M'];
+            self.aa_aliphatic = self
+                .sequence
+                .chars()
+                .filter(|c| aliphatics.contains(c))
+                .count();
+        }
+        return self.aa_aliphatic;
+    }
+
+    fn aa_aromatic(&mut self) -> usize {
+        if self.aa_aromatic == 0 {
+            let aromatics = ['F', 'Y', 'W'];
+            self.aa_aromatic = self
+                .sequence
+                .chars()
+                .filter(|c| aromatics.contains(c))
+                .count();
+        }
+        return self.aa_aromatic;
+    }
+
+    fn aa_neutral(&mut self) -> usize {
+        if self.aa_neutral == 0 {
+            let neutrals = ['S', 'T', 'C', 'N', 'Q'];
+            self.aa_neutral = self
+                .sequence
+                .chars()
+                .filter(|c| neutrals.contains(c))
+                .count();
+        }
+        return self.aa_neutral;
+    }
+
+    fn aa_positive(&mut self) -> usize {
+        if self.aa_positive == 0 {
+            let positives = ['K', 'H', 'R'];
+            self.aa_positive = self
+                .sequence
+                .chars()
+                .filter(|c| positives.contains(c))
+                .count();
+        }
+        return self.aa_positive;
+    }
+
+    fn aa_negative(&mut self) -> usize {
+        if self.aa_negative == 0 {
+            let negatives = ['D', 'E'];
+            self.aa_negative = self
+                .sequence
+                .chars()
+                .filter(|c| negatives.contains(c))
+                .count();
+        }
+        return self.aa_negative;
     }
 }

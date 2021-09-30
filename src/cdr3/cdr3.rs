@@ -1,20 +1,18 @@
-use clap::{App, Arg, Error, SubCommand};
-use csv::Writer;
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 // use serde_json::Result;
 use serde_with::serde_as;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fs::{self, File, OpenOptions};
+use std::fs::File;
 use std::io::{self, prelude::*, BufReader};
 use std::iter::FromIterator;
-use std::path::{Path, PathBuf};
-use std::{env, str};
+use std::path::PathBuf;
+use std::str;
 use velcro::hash_map;
 
-use crate::app::OutputFormat;
+use crate::app::{InputFormat, OutputFormat};
 use crate::cdr3::prelude::*;
 
 #[serde_as]
@@ -208,25 +206,47 @@ pub fn aa_groups<'seq>(sequence: String) -> BTreeMap<String, HashSet<&'seq str>>
 //     return tmp;
 // }
 
-pub fn extract_cdr3(mut sequences: Vec<String>) -> HashMap<String, usize> {
-    lazy_static! {
-        static ref CDR3_REGEX: Regex =
-            Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").expect("extract cdr3 1");
+pub fn extract_cdr3(
+    mut sequences: Vec<String>,
+    input_format: &InputFormat,
+) -> HashMap<String, usize> {
+    match input_format {
+        InputFormat::Fasta => {
+            lazy_static! {
+                static ref CDR3_REGEX: Regex =
+                    Regex::new(r"((.+)(C)(.+)(C)(.{2})(.+)(WG.G)(.+)?)").expect("extract cdr3 1");
+            }
+
+            sequences.par_iter_mut().for_each(|s| {
+                let cdr3 = CDR3_REGEX.captures(&s);
+                if cdr3.is_some() {
+                    *s = String::from(
+                        cdr3.expect("extract cdr3 2")
+                            .get(7)
+                            .map_or("", |m| m.as_str()),
+                    );
+                }
+            });
+
+            let mut distinct_sequences: HashMap<String, usize> = HashMap::new();
+
+            for i in sequences {
+                // distinct_sequences.insert(i);
+                *distinct_sequences.entry(i).or_insert(0) += 1;
+            }
+
+            return distinct_sequences;
+        }
+        InputFormat::CdrOnly => {
+            let mut distinct_sequences: HashMap<String, usize> = HashMap::new();
+
+            for i in sequences {
+                *distinct_sequences.entry(i).or_insert(0) += 1;
+            }
+
+            return distinct_sequences;
+        }
     }
-
-    sequences.par_iter_mut().for_each(|s| {
-        let cdr3 = CDR3_REGEX.captures(&s).expect("extract cdr3 2");
-        *s = String::from(cdr3.get(7).map_or("", |m| m.as_str()));
-    });
-
-    let mut distinct_sequences: HashMap<String, usize> = HashMap::new();
-
-    for i in sequences {
-        // distinct_sequences.insert(i);
-        *distinct_sequences.entry(i).or_insert(0) += 1;
-    }
-
-    return distinct_sequences;
 }
 
 // pub fn write_cdr3_attributes(cdr3_attributes: Vec<CDR3Prop>, output_file: PathBuf) -> Result<()> {
@@ -245,6 +265,11 @@ pub fn write_cdr3_header() -> Result<(), Box<dyn std::error::Error>> {
         "ssf_helix",
         "ssf_turn",
         "ssf_sheet",
+        "aliphatic",
+        "aromatic",
+        "neutral",
+        "positive",
+        "negative",
     ])
     .expect("failed to write record header");
     wtr.flush().expect("failed to flush header");
@@ -258,10 +283,10 @@ pub fn write_cdr3_attributes(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut P = ProteinAnalysis::new(sequence, quantity, None);
     if output_format == &OutputFormat::Json {
-        println!("{}", serde_json::json!(P));
+        let _ = writeln!(std::io::stdout(), "{}", serde_json::json!(P));
     } else {
         let mut wtr = csv::Writer::from_writer(io::stdout());
-        wtr.write_record(&[
+        if let Err(err) = wtr.write_record(&[
             P.sequence.clone(),
             quantity.to_string(),
             P.length.to_string(),
@@ -274,29 +299,57 @@ pub fn write_cdr3_attributes(
             P.secondary_structure_fraction().0.to_string(),
             P.secondary_structure_fraction().1.to_string(),
             P.secondary_structure_fraction().2.to_string(),
-        ])
-        .expect("failed to write cdr3 attribute");
-        wtr.flush().expect("failed to flush cdr3 attribute");
+            P.aa_aliphatic.to_string(),
+            P.aa_aromatic.to_string(),
+            P.aa_neutral.to_string(),
+            P.aa_positive.to_string(),
+            P.aa_negative.to_string(),
+        ]) {
+            let _ = writeln!(std::io::stderr(), "Error in write record: {}", err);
+        }
+        if let Err(err) = wtr.flush() {
+            if err.kind() == std::io::ErrorKind::BrokenPipe {
+                std::process::exit(0);
+            }
+            let _ = writeln!(std::io::stderr(), "Error while flushing: {}", err);
+        }
     }
     Ok(())
 }
 
-fn parse_file(mut input_file: PathBuf) -> Vec<String> {
+fn parse_file(input_file: PathBuf, input_format: &InputFormat) -> Vec<String> {
     let input_file_handler = File::open(input_file).expect("Failed to open <INPUT_FILE>");
     let reader = BufReader::new(input_file_handler);
     let mut seqs = Vec::<String>::new();
 
-    for line in reader.lines() {
-        let line = match line {
-            Ok(line) => line,
-            Err(error) => {
-                println!("Error reading file: {:?}", error);
-                std::process::exit(4);
-            }
-        };
+    match input_format {
+        InputFormat::Fasta => {
+            for line in reader.lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(error) => {
+                        println!("Error reading file: {:?}", error);
+                        std::process::exit(4);
+                    }
+                };
 
-        if !line.starts_with(">") && !line.starts_with("#") && !line.starts_with("*") {
-            seqs.push(line.to_string());
+                if !line.starts_with(">") && !line.starts_with("#") && !line.starts_with("*") {
+                    seqs.push(line.to_string());
+                }
+            }
+        }
+        InputFormat::CdrOnly => {
+            for line in reader.lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(error) => {
+                        println!("Error reading file: {:?}", error);
+                        std::process::exit(4);
+                    }
+                };
+
+                seqs.push(line.to_string());
+            }
         }
     }
 
@@ -315,9 +368,10 @@ fn is_valid_cdr3(sequence: &str) -> bool {
 
 pub fn pipeline_cdr3(
     input_file: PathBuf,
+    input_format: InputFormat,
     output_format: OutputFormat,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let sequences = extract_cdr3(parse_file(input_file));
+    let sequences = extract_cdr3(parse_file(input_file, &input_format), &input_format);
 
     if output_format == OutputFormat::Csv {
         match write_cdr3_header() {

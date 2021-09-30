@@ -1,4 +1,10 @@
-use clap::{crate_version, App, AppSettings, Arg};
+use clap::{crate_version, App, AppSettings};
+
+#[derive(PartialEq)]
+pub enum InputFormat {
+    CdrOnly,
+    Fasta,
+}
 
 #[derive(PartialEq)]
 pub enum OutputFormat {
@@ -21,6 +27,7 @@ pub fn build_app() -> App<'static, 'static> {
              You may choose either `json` or `csv` as output formats.",
         )
         .args_from_usage("<INPUT_FILE>           'Sets the input file to use'")
+        .args_from_usage("--cdr-only             'Informs program that the input contains only CDR3VH sequences, separated by a new line'")
         .args_from_usage("-j, --json             'Select `json` as output format'")
         .args_from_usage("-c, --csv             'Select `csv` as output format [default]'");
     // .args_from_usage("<OUTPUT_FILE>          'Sets the output file to write to'")

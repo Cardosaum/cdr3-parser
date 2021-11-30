@@ -26,12 +26,10 @@ pub fn build_app() -> App<'static, 'static> {
             "Output chemical properties and statistics of CDR3 sequences within a `aafreq` file.\n\
              You may choose either `json` or `csv` as output formats.",
         )
-        .args_from_usage("<INPUT_FILE>           'Sets the input file to use'")
-        .args_from_usage("--cdr-only             'Informs program that the input contains only CDR3VH sequences, separated by a new line'")
-        .args_from_usage("-j, --json             'Select `json` as output format'")
-        .args_from_usage("-c, --csv             'Select `csv` as output format [default]'");
-    // .args_from_usage("<OUTPUT_FILE>          'Sets the output file to write to'")
-    // .args_from_usage("-n, --no-clobber       'Do not overwrite an existing file'");
+        .args_from_usage("<INPUT_FILE> 'Sets the input file to use'")
+        .args_from_usage("--cdr-only   'Informs program that the input contains only CDR3VH sequences, separated by a new line'")
+        .args_from_usage("-j, --json   'Select `json` as output format'")
+        .args_from_usage("-c, --csv    'Select `csv` as output format [default]'");
 
     app
 }

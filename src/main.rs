@@ -1,4 +1,3 @@
-// #![feature(map_first_last)]
 extern crate bio;
 extern crate clap;
 extern crate num;
@@ -27,20 +26,6 @@ fn main() {
         None => {}
     }
 
-    // match matches.value_of("OUTPUT_FILE") {
-    //     Some(output_file) => {
-    //         if Path::new(output_file).is_file() && matches.is_present("no-clobber") {
-    //             println!("File `{}` exists, aborting.", output_file);
-    //             std::process::exit(2);
-    //         }
-    //         if Path::new(output_file).is_dir() {
-    //             println!("`{}` is a directory, aborting.", output_file);
-    //             std::process::exit(3);
-    //         }
-    //     }
-    //     None => {}
-    // }
-
     let input_file = PathBuf::from(
         matches
             .value_of("INPUT_FILE")
@@ -57,13 +42,6 @@ fn main() {
         true => InputFormat::CdrOnly,
         false => InputFormat::Fasta,
     };
-
-    // let output_file = PathBuf::from(
-    //     matches
-    //         .value_of("OUTPUT_FILE")
-    //         .get_or_insert("OUTPUT_FILE")
-    //         .to_string(),
-    // );
 
     match pipeline_cdr3(input_file, input_format, output_format) {
         Ok(_) => (),

@@ -3,11 +3,8 @@
 // all rights reserved to the original authors.
 //
 
-// use crate::cdr3::isoelectric_point::IsoelectricPoint;
 use lazy_static::lazy_static;
-use num::pow;
 use serde::Serialize;
-use serde_json::json;
 use std::collections::{HashMap, HashSet};
 
 lazy_static! {

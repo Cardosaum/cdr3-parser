@@ -87,12 +87,10 @@ pub fn molecular_weight(sequence: &str) -> f64 {
     let mut mw: f64 = 0.0;
 
     sequence.bytes().for_each(|c| {
-        // println!("{}", c);
-        let aa = match monoisotopic_protein_weights
+        match monoisotopic_protein_weights
             .get_key_value(&str::from_utf8(&[c]).expect("molecular wieght @ cdr3"))
         {
             Some(aa) => {
-                // println!("{:?}", aa);
                 mw += aa.1;
             }
             None => {}

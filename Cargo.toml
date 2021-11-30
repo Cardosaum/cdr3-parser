@@ -2,7 +2,7 @@
 authors = ["Matheus Cardoso <cardosaum@pm.me>"]
 categories = ["bioinformatics"]
 description = "cdr3-parser is a simple and fast parser to 'aafreq' files generated from ATTILA."
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/Cardosaum/cdr3-parser"
 keywords = [
     "bioinformatics",

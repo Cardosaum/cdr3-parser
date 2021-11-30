@@ -4,6 +4,8 @@ A simple program to convert `aafreq` files (generated as an intermediate step
 from [ATTILA](https://github.com/Cardosaum/attila)) into `csv` or `json` files
 containing statistics about all VH-CDR3 regions presented in the input file.
 
+## Overview
+
 ```bash
 $ cdr3-parser --help
 
@@ -24,3 +26,18 @@ FLAGS:
 ARGS:
     <INPUT_FILE>    Sets the input file to use
 ```
+
+## Installation
+
+The project is still in 'alpha', only intended for local use at the University
+of Brasília's Bioinformatics Laboratory, but if you want to run it locally, you
+can compile the source code. Just bear in mind that you'll need a working rust
+installation in order to do that.
+
+    git clone https://github.com/Cardosaum/cdr3-parser.git
+    cd cdr3-parser
+    cargo install --path .
+
+After successfully compiling the code, and assuring that `~/.cargo/bin` is in
+your `$PATH`, you are good to go :)
+    
